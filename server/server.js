@@ -48,11 +48,13 @@ class GameBoard {
   }
 
   randomFreePosition() {
-    let pos = [
-      Math.floor(Math.random() * gameState.width),
-      Math.floor(Math.random() * gameState.height)
-    ];
-
+    let pos = [0, 0];
+    do {
+      pos = [
+        Math.floor(Math.random() * gameState.width),
+        Math.floor(Math.random() * gameState.height)
+      ];
+    } while (this.occupied(pos));
     return pos;
   }
 }
