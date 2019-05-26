@@ -1,7 +1,6 @@
 import React from 'react';
 // import './Main.css';
 import './WsClient';
-import './KeyListener';
 import BoardObservable from './BoardObservable';
 import WsClient from './WsClient';
 
@@ -14,14 +13,15 @@ class Board extends React.Component {
     this.resetCanvas();
 
     this.props.board.onUpdate(board => {
+      console.log('drawing...', board);
       this.resetCanvas();
       for (let player in board.players) {
-        for (let part in player.parts) {
-          this.drawBox('#00ff00', ...part);
+        for (let part of board.players[player].parts) {
+          this.drawBox('#00ff00', part[0], part[1]);
         }
       }
-      for (let food in board.food) {
-        this.drawBox('#0000ff', ...food);
+      for (let food of board.food) {
+        this.drawBox('#0000ff', food[0], food[1]);
       }
     });
   }
@@ -33,6 +33,7 @@ class Board extends React.Component {
   }
 
   drawBox(color, x, y) {
+    console.log('drawBox', color, x, y);
     const offset = (width / tileSize) * 0.1;
     const ctx = this.refs.canvas.getContext('2d');
     ctx.fillStyle = color;
@@ -49,40 +50,67 @@ class Board extends React.Component {
   }
 }
 
-const NameInput = props => {
-  return (
-    <form>
-      <label>Name:</label>
-      <input type="text" onSubmit={e => props.wsclient.sendName(e.target)} />
-    </form>
-  );
-};
+var player_name = '';
+class NameInput extends React.Component {
+  render() {
+    return (
+      <form>
+        <label>
+          Name:
+          <input
+            type="text"
+            onChange={e => this.setState({ name: e.target.value })}
+          />
+        </label>
+        <input
+          type="button"
+          value="Submit"
+          onClick={e => {
+            console.log(this.state.name);
+            this.props.wsclient.sendName(this.state.name);
+            player_name = this.state.name;
+          }}
+        />
+      </form>
+    );
+  }
+}
 
 class Main extends React.Component {
   constructor(props) {
     super(props);
-    this.board = null;
     this.pos = [0, 0];
-    this.startGame();
+    this.boardObs = new BoardObservable();
+    this.boardObs.onUpdate(board => {
+      this.board = board;
+    });
 
-    // document.onkeydown = ev => {
-    //   let newPos = this.pos;
-    //   switch (ev.keyCode) {
-    //     case 37: // left
-    //     newPos = [this.pos]
-    //     case 38: // up
-    //     case 39: // right
-    //     case 40: // down
-    //       break;
-    //     default:
-    //   }
-    // };
-  }
+    this.ws = new WsClient(this.boardObs);
 
-  startGame() {
-    this.board = new BoardObservable();
-    // this.ws = new WsClient();
-    // this.ws.connect(this.board);
+    document.onkeydown = ev => {
+      console.log('key pressed', this.board)
+      if (this.board) {
+        let player = this.board.players[player_name];
+        let newPos = player.parts.pop();
+        switch (ev.keyCode) {
+          case 37: // left
+            newPos = [newPos[0] - 1, newPos[1]];
+            break;
+          case 38: // up
+            newPos = [newPos[0], newPos[1] - 1];
+            break;
+          case 39: // right
+            newPos = [newPos[0] + 1, newPos[1]];
+            break;
+          case 40: // down
+            newPos = [newPos[0], newPos[1] + 1];
+            break;
+          default:
+        }
+        console.log('new Pos: ' + newPos);
+        this.ws.sendNewPos(player_name, newPos);
+      }
+    };
   }
 
   render() {
@@ -90,7 +118,7 @@ class Main extends React.Component {
       <div className="App">
         <h1>Snake 9000</h1>
         <NameInput wsclient={this.ws} />
-        <Board board={this.board} />
+        <Board board={this.boardObs} />
       </div>
     );
   }

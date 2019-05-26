@@ -2,18 +2,18 @@ const host = 'localhost';
 const port = 6969;
 
 class WsClient {
-  constructor() {
+  constructor(board) {
+    this.board = board;
     this.ws = new WebSocket(`ws://${host}:${port}`);
-    this.board = null;
     this.ws.onopen = () => {
       console.log('connected to server');
     };
 
     this.ws.onmessage = e => {
-      const msg = JSON.parse(e);
+      const msg = JSON.parse(e.data);
       switch (msg.type) {
         case 'state':
-          this.board.update(msg.board);
+          this.board.update(msg.state);
           break;
         case 'gameOver':
           alert('GAME OVER!!!');
@@ -27,10 +27,6 @@ class WsClient {
     this.ws.send(JSON.stringify(data));
   }
 
-  connect(board) {
-    this.board = board;
-  }
-
   sendName(name) {
     this._send({
       type: 'start',
@@ -38,9 +34,10 @@ class WsClient {
     });
   }
 
-  sendNewPos(newPos) {
+  sendNewPos(name, newPos) {
     this._send({
       type: 'move',
+      name: name,
       pos: newPos
     });
   }

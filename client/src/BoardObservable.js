@@ -5,6 +5,7 @@ class BoardObservable {
   }
 
   update(newBoard) {
+    console.log('updating', newBoard)
     this.board = newBoard;
     this.listeners.forEach(fn => fn(this.board));
   }
